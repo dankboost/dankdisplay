@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dank Directory</title>
+<meta name="description" content="Browse every card in the Dank Directory by collection, series and card number.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#12302a; --felt-2:#0d2420; --sleeve:rgba(255,255,255,.07); --sleeve-line:rgba(255,255,255,.16);
+  --ink:#f1f3e8; --ink-dim:#a9bdb3; --accent:#ff4f8b; --accent-ink:#2a0615;
+  --radius:10px;
+  --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:light){
+  :root:not([data-theme="dark"]){
+    --felt:#eef0e4; --felt-2:#e2e6d6; --sleeve:rgba(18,48,42,.05); --sleeve-line:rgba(18,48,42,.2);
+    --ink:#12302a; --ink-dim:#4f6b60; --accent:#d81b60; --accent-ink:#fff;
+  }
+}
+:root[data-theme="light"]{
+  --felt:#eef0e4; --felt-2:#e2e6d6; --sleeve:rgba(18,48,42,.05); --sleeve-line:rgba(18,48,42,.2);
+  --ink:#12302a; --ink-dim:#4f6b60; --accent:#d81b60; --accent-ink:#fff;
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:80px}
+body{margin:0;background:var(--felt);color:var(--ink);font:400 15px/1.5 var(--body);min-height:100vh}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header.top{position:sticky;top:0;z-index:20;background:var(--felt);border-bottom:1px solid var(--sleeve-line);
+  display:flex;gap:16px;align-items:center;padding:12px 20px}
+.brand{font:800 22px/1 var(--display);letter-spacing:-.02em;text-decoration:none;white-space:nowrap}
+.brand small{font:500 13px var(--body);color:var(--ink-dim);letter-spacing:0;margin-left:8px}
+.search{flex:1;max-width:420px;margin-left:auto}
+.search input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--sleeve-line);background:var(--sleeve)}
+.search input::placeholder{color:var(--ink-dim)}
+.theme{border:1px solid var(--sleeve-line);background:var(--sleeve);border-radius:8px;padding:8px 12px;cursor:pointer}
+
+.shell{display:grid;grid-template-columns:240px 1fr;gap:0;max-width:1500px;margin:0 auto}
+nav.index{position:sticky;top:57px;align-self:start;height:calc(100vh - 57px);overflow:auto;padding:20px 12px 40px 20px;border-right:1px solid var(--sleeve-line)}
+nav.index h2{font:800 13px var(--display);color:var(--ink-dim);margin:0 0 10px;letter-spacing:.02em}
+nav.index ol{list-style:none;margin:0;padding:0}
+nav.index li button{width:100%;display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:baseline;text-align:left;
+  background:none;border:0;border-radius:8px;padding:8px;cursor:pointer}
+nav.index li button:hover{background:var(--sleeve)}
+nav.index li button[aria-current="true"]{background:var(--accent);color:var(--accent-ink)}
+nav.index .sn{font:500 12px var(--body);font-variant-numeric:tabular-nums;opacity:.75}
+nav.index .nm{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav.index .ct{font-size:12px;font-variant-numeric:tabular-nums;opacity:.75}
+.hidden-toggle{margin-top:16px;font-size:13px;color:var(--ink-dim);display:flex;gap:8px;align-items:center}
+
+main{padding:24px 24px 80px;min-width:0}
+.hero{display:flex;flex-wrap:wrap;align-items:end;gap:12px 32px;margin-bottom:20px}
+.hero h1{font:800 clamp(34px,5vw,64px)/.95 var(--display);letter-spacing:-.03em;margin:0}
+.hero p{margin:0;color:var(--ink-dim);max-width:46ch}
+.crumb{font-size:14px;color:var(--ink-dim);margin:0 0 6px}
+.crumb b{color:var(--ink);font-weight:600}
+
+.tools{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;margin:0 0 20px;padding:10px 0;border-block:1px solid var(--sleeve-line)}
+.tools label{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-dim)}
+.tools select{background:var(--sleeve);border:1px solid var(--sleeve-line);border-radius:8px;padding:6px 8px}
+.tools select option{color:#111}
+.tools input[type=range]{accent-color:var(--accent)}
+.tools .count{margin-left:auto;font-variant-numeric:tabular-nums}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--min,200px),1fr));gap:18px}
+.card{background:var(--sleeve);border:1px solid var(--sleeve-line);border-radius:var(--radius);padding:8px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px}
+.card:hover{border-color:var(--accent)}
+.card .art{aspect-ratio:5/7;border-radius:6px;background:var(--felt-2);overflow:hidden;display:grid;place-items:center}
+.card .art img,.card .art video{width:100%;height:100%;object-fit:contain;display:block}
+.card .meta{display:flex;justify-content:space-between;gap:8px;align-items:baseline;padding:0 2px 2px}
+.card .name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .no{font-size:12px;color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.more{display:block;margin:28px auto 0;padding:10px 22px;border-radius:999px;border:1px solid var(--accent);background:none;cursor:pointer}
+.more:hover{background:var(--accent);color:var(--accent-ink)}
+
+.state{padding:60px 0;text-align:center;color:var(--ink-dim)}
+.state b{display:block;color:var(--ink);font:800 22px var(--display);margin-bottom:6px}
+
+dialog{border:1px solid var(--sleeve-line);background:var(--felt);color:var(--ink);border-radius:14px;padding:0;width:min(1000px,94vw);max-height:92vh}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+.detail{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);max-height:92vh}
+.detail .view{background:var(--felt-2);display:grid;place-items:center;padding:16px;min-height:300px}
+.detail .view img,.detail .view video{max-width:100%;max-height:80vh;object-fit:contain}
+.detail .info{padding:24px;overflow:auto;display:flex;flex-direction:column;gap:14px}
+.detail h3{font:800 28px/1.05 var(--display);margin:0;letter-spacing:-.02em;overflow-wrap:anywhere}
+.detail dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:14px}
+.detail dt{color:var(--ink-dim)}
+.detail dd{margin:0;overflow-wrap:anywhere}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:auto}
+.btn{padding:9px 14px;border-radius:8px;border:1px solid var(--sleeve-line);background:var(--sleeve);cursor:pointer;text-decoration:none;font-size:14px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.close{position:absolute;top:10px;right:10px}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  nav.index{position:static;height:auto;border-right:0;border-bottom:1px solid var(--sleeve-line);padding:12px 16px}
+  nav.index ol{display:flex;gap:6px;overflow:auto;padding-bottom:6px}
+  nav.index li{flex:none}
+  nav.index li button{grid-template-columns:auto auto auto;white-space:nowrap}
+  .detail{grid-template-columns:1fr;overflow:auto}
+  header.top{padding:10px 14px}
+  .brand small{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#/" id="home">Dank Directory<small>on xcp.dankinfo.art</small></a>
+  <div class="search"><input id="q" type="search" placeholder="Search cards by name" aria-label="Search cards by name"></div>
+  <button class="theme" id="theme" type="button" aria-label="Switch light or dark">Theme</button>
+</header>
+
+<div class="shell">
+  <nav class="index" aria-label="Series">
+    <h2>Series</h2>
+    <ol id="seriesList"></ol>
+    <label class="hidden-toggle"><input type="checkbox" id="showAll"> Show helper folders (thumbs, jsons, old)</label>
+  </nav>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="crumb" id="crumb"></p>
+        <h1 id="title">All series</h1>
+      </div>
+      <p id="blurb">Every card is numbered by series and position, like S02 / C014, so each one has a permanent address.</p>
+    </section>
+
+    <div class="tools">
+      <label>Sort
+        <select id="sort">
+          <option value="index">Card number</option>
+          <option value="az">Name A to Z</option>
+          <option value="za">Name Z to A</option>
+        </select>
+      </label>
+      <label>Show
+        <select id="pageSize">
+          <option value="48">48</option>
+          <option value="96">96</option>
+          <option value="240">240</option>
+          <option value="100000">All</option>
+        </select>
+      </label>
+      <label>Size <input id="size" type="range" min="130" max="320" value="200"></label>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div id="out"></div>
+  </main>
+</div>
+
+<dialog id="dlg" aria-label="Card detail">
+  <button class="btn close" id="closeDlg" type="button">Close</button>
+  <div class="detail">
+    <div class="view" id="dView"></div>
+    <div class="info">
+      <h3 id="dName"></h3>
+      <dl id="dMeta"></dl>
+      <div class="btns">
+        <button class="btn" id="prev" type="button">Previous</button>
+        <button class="btn" id="next" type="button">Next</button>
+        <a class="btn primary" id="dOpen" target="_blank" rel="noopener">Open full size</a>
+        <button class="btn" id="dCopy" type="button">Copy link</button>
+        <a class="btn" id="dGh" target="_blank" rel="noopener">View on GitHub</a>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script>
+/* ---------- Settings you can edit ---------- */
+const CONFIG = {
+  collection: "Dank Directory",
+  repo: "dankboost/dankdirectory",
+  branch: "main",
+  // Where image files are served from. Empty string means "same site" (use this when the page lives on xcp.dankinfo.art).
+  base: location.hostname.endsWith("dankinfo.art") ? "" : "https://xcp.dankinfo.art",
+  // Folders that are not series. They stay hidden unless "Show helper folders" is ticked.
+  helperFolders: ["thumbs", "jsons", "old"],
+  // Series order and display names. Folders not listed here are added alphabetically after these.
+  series: [
+    { folder: "danks",          name: "Danks" },
+    { folder: "danks2",         name: "Danks 2" },
+    { folder: "bok3",           name: "Bok 3" },
+    { folder: "DG",             name: "DG" },
+    { folder: "VAPORMAGIC",     name: "Vapor Magic" },
+    { folder: "bluebear",       name: "Blue Bear" },
+    { folder: "purplefrog",     name: "Purple Frog" },
+    { folder: "simpsons",       name: "Simpsons" },
+    { folder: "paris",          name: "Paris" },
+    { folder: "sharps",         name: "Sharps" },
+    { folder: "limitededition", name: "Limited Edition" },
+    { folder: "ordinals",       name: "Ordinals" },
+    { folder: "1000000X",       name: "1,000,000X" },
+    { folder: "1000000000X",    name: "1,000,000,000X" }
+  ],
+  // Used only if both cards.json and the GitHub listing are unavailable.
+  fallback: ["danks/BEARCARD.JPG"]
+};
+const IMG = /\.(jpe?g|png|gif|webp|avif|svg)$/i, VID = /\.(mp4|webm)$/i;
+
+/* ---------- State ---------- */
+const S = { cards: [], series: [], view: "all", q: "", sort: "index", pageSize: 48, shown: 48, showHelpers: false, open: null };
+const $ = id => document.getElementById(id);
+const pad = (n, w) => String(n).padStart(w, "0");
+const urlFor = p => (CONFIG.base ? CONFIG.base + "/" : "") + p.split("/").map(encodeURIComponent).join("/");
+const ghFor = p => `https://github.com/${CONFIG.repo}/blob/${CONFIG.branch}/` + p.split("/").map(encodeURIComponent).join("/");
+const nameOf = f => f.replace(/\.[^.]+$/, "");
+
+/* ---------- Load the list of files ---------- */
+async function loadPaths() {
+  // 1. Optional manual list: cards.json, either ["danks/A.jpg", ...] or {"danks": ["A.jpg", ...]}
+  try {
+    const r = await fetch((CONFIG.base ? CONFIG.base + "/" : "") + "cards.json", { cache: "no-cache" });
+    if (r.ok) {
+      const j = await r.json();
+      if (Array.isArray(j)) return j;
+      return Object.entries(j).flatMap(([f, list]) => list.map(x => f + "/" + x));
+    }
+  } catch (e) {}
+  // 2. The repo's file tree from GitHub, cached for an hour (GitHub allows 60 anonymous calls per hour).
+  const key = "dd-tree-v1";
+  try {
+    const c = JSON.parse(sessionStorage.getItem(key) || localStorage.getItem(key) || "null");
+    if (c && Date.now() - c.t < 3600e3) return c.paths;
+  } catch (e) {}
+  try {
+    const r = await fetch(`https://api.github.com/repos/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`);
+    if (r.ok) {
+      const j = await r.json();
+      const paths = j.tree.filter(x => x.type === "blob" && (IMG.test(x.path) || VID.test(x.path))).map(x => x.path);
+      try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), paths })); } catch (e) {}
+      return paths;
+    }
+  } catch (e) {}
+  return null;
+}
+
+function build(paths) {
+  const byFolder = new Map();
+  paths.filter(p => IMG.test(p) || VID.test(p)).forEach(p => {
+    const i = p.indexOf("/");
+    if (i < 0) return;                       // ignore files in the repo root
+    const folder = p.slice(0, i);
+    if (!byFolder.has(folder)) byFolder.set(folder, []);
+    byFolder.get(folder).push(p);
+  });
+  const known = CONFIG.series.filter(s => byFolder.has(s.folder));
+  const extra = [...byFolder.keys()].filter(f => !CONFIG.series.some(s => s.folder === f)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
+    .map(f => ({ folder: f, name: f }));
+  const real = [...known, ...extra].filter(s => !CONFIG.helperFolders.includes(s.folder.split("/")[0]));
+  const helpers = [...known, ...extra].filter(s => CONFIG.helperFolders.includes(s.folder.split("/")[0]));
+  S.series = [...real, ...helpers].map((s, i) => ({ ...s, n: i + 1, helper: helpers.includes(s) }));
+  S.cards = [];
+  S.series.forEach(s => {
+    const files = byFolder.get(s.folder).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }));
+    s.count = files.length;
+    files.forEach((p, i) => S.cards.push({
+      path: p, file: p.slice(p.indexOf("/") + 1), name: nameOf(p.slice(p.lastIndexOf("/") + 1)),
+      series: s, c: i + 1, video: VID.test(p)
+    }));
+  });
+}
+
+/* ---------- Rendering ---------- */
+const notation = c => `S${pad(c.series.n, 2)} / C${pad(c.c, Math.max(3, String(c.series.count).length))}`;
+function visibleSeries() { return S.series.filter(s => S.showHelpers || !s.helper); }
+
+function renderNav() {
+  const total = visibleSeries().reduce((a, s) => a + s.count, 0);
+  const rows = [`<li><button type="button" data-v="all" aria-current="${S.view === "all"}"><span class="sn"></span><span class="nm">All series</span><span class="ct">${total}</span></button></li>`]
+    .concat(visibleSeries().map(s => `<li><button type="button" data-v="${s.folder}" aria-current="${S.view === s.folder}"><span class="sn">S${pad(s.n, 2)}</span><span class="nm">${esc(s.name)}</span><span class="ct">${s.count}</span></button></li>`));
+  $("seriesList").innerHTML = rows.join("");
+}
+
+function filtered() {
+  let list = S.cards.filter(c => S.showHelpers || !c.series.helper);
+  if (S.view !== "all") list = list.filter(c => c.series.folder === S.view);
+  if (S.q) { const q = S.q.toLowerCase(); list = list.filter(c => c.name.toLowerCase().includes(q) || c.file.toLowerCase().includes(q)); }
+  if (S.sort === "az") list = [...list].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  if (S.sort === "za") list = [...list].sort((a, b) => b.name.localeCompare(a.name, undefined, { numeric: true }));
+  return list;
+}
+
+function render() {
+  renderNav();
+  const list = filtered(), cur = S.series.find(s => s.folder === S.view);
+  $("title").textContent = cur ? cur.name : "All series";
+  $("crumb").innerHTML = `<b>${esc(CONFIG.collection)}</b>${cur ? ` / Series ${pad(cur.n, 2)}` : ""}`;
+  $("count").textContent = `${list.length} card${list.length === 1 ? "" : "s"}`;
+  if (!list.length) {
+    $("out").innerHTML = `<div class="state"><b>No cards found</b>${S.q ? "Try a different search or pick another series." : "Nothing is listed for this view yet."}</div>`;
+    return;
+  }
+  const slice = list.slice(0, S.shown);
+  $("out").innerHTML = `<div class="grid">${slice.map(card).join("")}</div>` +
+    (list.length > slice.length ? `<button class="more" id="more" type="button">Show more (${list.length - slice.length} left)</button>` : "");
+}
+
+function card(c) {
+  const media = c.video
+    ? `<video src="${urlFor(c.path)}" muted loop playsinline preload="metadata"></video>`
+    : `<img src="${urlFor(c.path)}" alt="${esc(c.name)}" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'Image not found',style:'color:var(--ink-dim);font-size:13px;padding:8px;text-align:center'}))">`;
+  return `<button class="card" type="button" data-p="${esc(c.path)}"><div class="art">${media}</div>
+    <div class="meta"><span class="name">${esc(c.name)}</span><span class="no">${notation(c)}</span></div></button>`;
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+
+/* ---------- Detail dialog ---------- */
+function openCard(path, push = true) {
+  const c = S.cards.find(x => x.path === path); if (!c) return;
+  S.open = c;
+  $("dView").innerHTML = c.video ? `<video src="${urlFor(c.path)}" controls autoplay loop muted playsinline></video>` : `<img src="${urlFor(c.path)}" alt="${esc(c.name)}">`;
+  $("dName").textContent = c.name;
+  $("dMeta").innerHTML = `<dt>Collection</dt><dd>${esc(CONFIG.collection)}</dd>
+    <dt>Series</dt><dd>S${pad(c.series.n, 2)}, ${esc(c.series.name)}</dd>
+    <dt>Card</dt><dd>C${pad(c.c, Math.max(3, String(c.series.count).length))} of ${c.series.count}</dd>
+    <dt>File</dt><dd>${esc(c.path)}</dd>`;
+  $("dOpen").href = urlFor(c.path); $("dGh").href = ghFor(c.path);
+  if (!$("dlg").open) $("dlg").showModal();
+  if (push) history.replaceState(null, "", "#/" + c.path.split("/").map(encodeURIComponent).join("/"));
+}
+function step(d) {
+  const list = filtered().filter(c => !S.open || c.series.folder === S.open.series.folder || S.view === "all");
+  const i = list.findIndex(c => c.path === S.open.path);
+  if (i >= 0 && list.length) openCard(list[(i + d + list.length) % list.length].path);
+}
+
+/* ---------- Routing by hash: #/  #/danks  #/danks/BEARCARD.JPG ---------- */
+function route() {
+  const h = decodeURIComponent(location.hash.replace(/^#\/?/, ""));
+  if (!h) { S.view = "all"; if ($("dlg").open) $("dlg").close(); }
+  else if (S.cards.some(c => c.path === h)) { const c = S.cards.find(c => c.path === h); S.view = c.series.folder; render(); openCard(h, false); return; }
+  else if (S.series.some(s => s.folder === h)) S.view = h;
+  S.shown = S.pageSize; render();
+}
+
+/* ---------- Events ---------- */
+document.addEventListener("click", e => {
+  const nav = e.target.closest("nav.index button");
+  if (nav) { location.hash = nav.dataset.v === "all" ? "#/" : "#/" + encodeURIComponent(nav.dataset.v); return; }
+  const cd = e.target.closest(".card"); if (cd) { openCard(cd.dataset.p); return; }
+  if (e.target.id === "more") { S.shown += S.pageSize; render(); }
+});
+$("q").addEventListener("input", e => { S.q = e.target.value.trim(); S.shown = S.pageSize; render(); });
+$("sort").addEventListener("change", e => { S.sort = e.target.value; render(); });
+$("pageSize").addEventListener("change", e => { S.pageSize = +e.target.value; S.shown = S.pageSize; render(); });
+$("size").addEventListener("input", e => document.documentElement.style.setProperty("--min", e.target.value + "px"));
+$("showAll").addEventListener("change", e => { S.showHelpers = e.target.checked; if (!S.showHelpers && S.series.find(s => s.folder === S.view)?.helper) S.view = "all"; render(); });
+$("closeDlg").addEventListener("click", () => $("dlg").close());
+$("dlg").addEventListener("close", () => { S.open = null; if (S.view !== "all") history.replaceState(null, "", "#/" + encodeURIComponent(S.view)); else history.replaceState(null, "", "#/"); });
+$("dlg").addEventListener("click", e => { if (e.target === $("dlg")) $("dlg").close(); });
+$("prev").addEventListener("click", () => step(-1));
+$("next").addEventListener("click", () => step(1));
+$("dCopy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(S.open ? new URL(urlFor(S.open.path), location.href).href : ""); $("dCopy").textContent = "Copied"; setTimeout(() => $("dCopy").textContent = "Copy link", 1400); } catch (e) {}
+});
+document.addEventListener("keydown", e => {
+  if (!$("dlg").open) return;
+  if (e.key === "ArrowLeft") step(-1); if (e.key === "ArrowRight") step(1);
+});
+$("theme").addEventListener("click", () => {
+  const root = document.documentElement, dark = getComputedStyle(root).getPropertyValue("--felt").trim() === "#12302a";
+  root.dataset.theme = dark ? "light" : "dark";
+});
+window.addEventListener("hashchange", route);
+
+/* ---------- Start ---------- */
+(async function () {
+  $("out").innerHTML = `<div class="state"><b>Loading cards</b>Reading the directory.</div>`;
+  let paths = await loadPaths(), note = "";
+  if (!paths || !paths.length) { paths = CONFIG.fallback; note = "The full listing could not be loaded, so only a sample is shown. Add a cards.json file or try again in an hour."; }
+  build(paths);
+  if (note) $("blurb").textContent = note;
+  route();
+})();
+</script>
+</body>
+</html>
